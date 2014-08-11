@@ -1,3 +1,6 @@
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.codec.binary.Hex;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -20,6 +23,7 @@ import java.util.Map;
 public class WikiReader {
 
     private static MessageDigest md;
+    public static final String SERVER_ROOT_URI = "http://localhost:7474/";
 
     static {
         try {
@@ -32,7 +36,7 @@ public class WikiReader {
     private static HashMap<String, Link> existingNodes = new HashMap<String, Link>();
 
     public static void main(String[] args) throws Exception {
-        System.out.println("CREATE (currentNode:Article {href:'http://en.wikipedia.org/wiki/Wikipedia'});");
+        /*System.out.println("CREATE (currentNode:Article {href:'http://en.wikipedia.org/wiki/Wikipedia'});");
         existingNodes.put("http://en.wikipedia.org/wiki/Wikipedia", new Link("", "/wiki/Wikipedia", "http://en.wikipedia.org/wiki/Wikipedia"));
         WikiReader reader = new WikiReader("http://en.wikipedia.org/wiki/Wikipedia");
         reader.run();
@@ -49,7 +53,9 @@ public class WikiReader {
         System.out.println();
         System.out.println();
         System.out.println();
-        System.out.println(reader3.getCreationStatement());
+        System.out.println(reader3.getCreationStatement());*/
+
+        sendCipher("MATCH (n) RETURN n LIMIT 100");
     }
 
     public WikiReader(String url) {
@@ -121,5 +127,25 @@ public class WikiReader {
         } catch (Exception e) {
             return "";
         }
+    }
+
+    public static void sendCipher(String query) {
+        final String txUri = SERVER_ROOT_URI + "transaction/commit";
+        WebResource resource = Client.create().resource( txUri );
+
+        String payload = "{\"statements\" : [ {\"statement\" : \"" + query + "\"} ]}";
+        ClientResponse response = resource
+                .accept( "application/json" )
+                .type( "application/json" )
+                .entity( payload )
+                .post( ClientResponse.class );
+
+        System.out.println( String.format(
+                "POST [%s] to [%s], status code [%d], returned data: "
+                        + System.getProperty( "line.separator" ) + "%s",
+                payload, txUri, response.getStatus(),
+                response.getEntity( String.class ) ) );
+
+        response.close();
     }
 }
